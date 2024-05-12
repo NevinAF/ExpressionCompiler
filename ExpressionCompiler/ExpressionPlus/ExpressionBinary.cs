@@ -102,19 +102,19 @@ namespace NAF.ExpressionCompiler
 
 		private bool IsNumeric(in Term left, in Term right, ref Expression exprL, ref Expression exprR)
 		{
-			int leftNumaric = exprL.Type.NumaricTypePrecedence();
-			int rightNumaric = exprR.Type.NumaricTypePrecedence();
-			if (leftNumaric > 0 && rightNumaric > 0)
+			int leftNumeric = exprL.Type.NumericTypePrecedence();
+			int rightNumeric = exprR.Type.NumericTypePrecedence();
+			if (leftNumeric > 0 && rightNumeric > 0)
 			{
-				if (leftNumaric > rightNumaric)
+				if (leftNumeric > rightNumeric)
 				{
 					exprR = Convert(right, exprL.Type);
-					return leftNumaric != (int)TypeCode.Decimal;
+					return leftNumeric != (int)TypeCode.Decimal;
 				}
 				else
 				{
 					exprL = Convert(left, exprR.Type);
-					return rightNumaric != (int)TypeCode.Decimal;
+					return rightNumeric != (int)TypeCode.Decimal;
 				}
 			}
 
@@ -192,6 +192,16 @@ namespace NAF.ExpressionCompiler
 					);
 				}
 				else return ExpressionConstructors.LogicalBinaryConstructor(type, exprL, exprR);
+			}
+
+			// Check if one of the expressions is null and the other is non-value type
+			if (!exprL.Type.IsValueType && !exprR.Type.IsValueType)
+			{
+				if (exprL is ConstantExpression lConst && lConst.Value == null && lConst.Type == typeof(object) ||
+					exprR is ConstantExpression rConst && rConst.Value == null && rConst.Type == typeof(object))
+				{
+					return ExpressionConstructors.LogicalBinaryConstructor(type, exprL, exprR);
+				}
 			}
 
 			return GetUserDefinedBinaryOperator(type, methodName, op, left, right);

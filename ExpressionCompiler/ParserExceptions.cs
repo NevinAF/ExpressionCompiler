@@ -56,14 +56,14 @@ namespace NAF.ExpressionCompiler
 		internal SyntacticException(ReadOnlySpan<char> expression, int index, int length, string message, System.Exception innerException) : base(expression, index, length, message, innerException) { }
 	}
 
-	public class SymanticException : ParserException
+	public class SemanticException : ParserException
 	{
-		internal SymanticException(ReadOnlySpan<char> expression, int index, int length, string message) : base(expression, index, length, message) { }
-		internal SymanticException(ReadOnlySpan<char> expression, int index, int length, string message, System.Exception innerException) : base(expression, index, length, message, innerException) { }
-		internal SymanticException(ReadOnlySpan<char> expression, IStringSpan stringSpan, string message) : base(expression, stringSpan, message) { }
-		internal SymanticException(ReadOnlySpan<char> expression, IStringSpan stringSpan, string message, System.Exception innerException) : base(expression, stringSpan, message, innerException) { }
+		internal SemanticException(ReadOnlySpan<char> expression, int index, int length, string message) : base(expression, index, length, message) { }
+		internal SemanticException(ReadOnlySpan<char> expression, int index, int length, string message, System.Exception innerException) : base(expression, index, length, message, innerException) { }
+		internal SemanticException(ReadOnlySpan<char> expression, IStringSpan stringSpan, string message) : base(expression, stringSpan, message) { }
+		internal SemanticException(ReadOnlySpan<char> expression, IStringSpan stringSpan, string message, System.Exception innerException) : base(expression, stringSpan, message, innerException) { }
 
-		internal SymanticException(ReadOnlySpan<char> expression, in TokenType expected, in Token token, string? message) : this(
+		internal SemanticException(ReadOnlySpan<char> expression, in TokenType expected, in Token token, string? message) : this(
 			expression,
 			token,
 			(string.IsNullOrEmpty(message) ? string.Empty : message + "\n") + $"Expected token type '{expected}' but got '{token.type}'")

@@ -166,9 +166,9 @@ public class ParserTests
 		Assert.IsInstanceOf<Func<string>>(a);
 		Assert.That(((Func<string>)a)(), Is.EqualTo("This is a string and it's awesome to have \" characters."));
 
-		a = compiler.Compile("\"'More schenanigans' is a string inside a string! What about \\\\ this?? One backslash lol\"");
+		a = compiler.Compile("\"'More shenanigans' is a string inside a string! What about \\\\ this?? One backslash lol\"");
 		Assert.IsInstanceOf<Func<string>>(a);
-		Assert.That(((Func<string>)a)(), Is.EqualTo("'More schenanigans' is a string inside a string! What about \\ this?? One backslash lol"));
+		Assert.That(((Func<string>)a)(), Is.EqualTo("'More shenanigans' is a string inside a string! What about \\ this?? One backslash lol"));
 	}
 
 	[Test]
@@ -757,17 +757,17 @@ public class ParserTests
 		Func<object, object> one;
 		Compiler compiler = new Compiler();
 
-		one = compiler.CompileAnonomus("{0}.ToString()", typeof(object));
+		one = compiler.CompileAnonymous("{0}.ToString()", typeof(object));
 		Assert.That(one(5), Is.EqualTo("5"));
 		Assert.That(one("Hello"), Is.EqualTo("Hello"));
 		Assert.That(one(5.5), Is.EqualTo("5.5"));
 
-		one = compiler.CompileAnonomus("this.ToString()", typeof(object));
+		one = compiler.CompileAnonymous("this.ToString()", typeof(object));
 		Assert.That(one(5), Is.EqualTo("5"));
 		Assert.That(one("Hello"), Is.EqualTo("Hello"));
 		Assert.That(one(5.5), Is.EqualTo("5.5"));
 
-		one = compiler.CompileAnonomus("{0} + 5.ToString() + \"SomeString\"", typeof(object));
+		one = compiler.CompileAnonymous("{0} + 5.ToString() + \"SomeString\"", typeof(object));
 		Assert.That(one(5), Is.EqualTo(5 + 5.ToString() + "SomeString"));
 		Assert.That(one("Hello"), Is.EqualTo("Hello" + 5.ToString() + "SomeString"));
 		Assert.That(one(5.5), Is.EqualTo(5.5 + 5.ToString() + "SomeString"));
@@ -775,47 +775,47 @@ public class ParserTests
 
 		Func<object, object, object> two;
 
-		two = compiler.CompileAnonomus("{0} + {1}", typeof(int), typeof(int));
+		two = compiler.CompileAnonymous("{0} + {1}", typeof(int), typeof(int));
 		Assert.That(two(5, 10), Is.EqualTo(5 + 10));
 		Assert.That(two(1053, 705), Is.EqualTo(1053 + 705));
 
-		two = compiler.CompileAnonomus("{0} + {1}", typeof(string), typeof(string));
+		two = compiler.CompileAnonymous("{0} + {1}", typeof(string), typeof(string));
 		Assert.That(two("Hello", "World"), Is.EqualTo("Hello" + "World"));
 		Assert.That(two("This is a ", "test"), Is.EqualTo("This is a " + "test"));
 
-		two = compiler.CompileAnonomus("{0} >= {1}", typeof(int), typeof(int));
+		two = compiler.CompileAnonymous("{0} >= {1}", typeof(int), typeof(int));
 		Assert.That(two(5, 10), Is.EqualTo(5 >= 10));
 		Assert.That(two(1053, 705), Is.EqualTo(1053 >= 705));
 
-		two = compiler.CompileAnonomus("Math.Min({0}, {1})", typeof(int), typeof(int));
+		two = compiler.CompileAnonymous("Math.Min({0}, {1})", typeof(int), typeof(int));
 		Assert.That(two(5, 10), Is.EqualTo(Math.Min(5, 10)));
 		Assert.That(two(1053, 705), Is.EqualTo(Math.Min(1053, 705)));
 
-		two = compiler.CompileAnonomus("'Result is : ' + {0} + ' % ' + {1} + ' or ' + (int.Parse({0}) % {1})", typeof(string), typeof(int));
+		two = compiler.CompileAnonymous("'Result is : ' + {0} + ' % ' + {1} + ' or ' + (int.Parse({0}) % {1})", typeof(string), typeof(int));
 		Assert.That(two("5", 10), Is.EqualTo("Result is : " + "5" + " % " + 10 + " or " + (int.Parse("5") % 10)));
 		Assert.That(two("1053", 705), Is.EqualTo("Result is : " + "1053" + " % " + 705 + " or " + (int.Parse("1053") % 705)));
 
 
 		Func<object, object, object, object> three;
 
-		three = compiler.CompileAnonomus("(-{1} + Math.Sqrt({1} * {1} - 4 * {0} * {2})) / (2 * {0})", typeof(double), typeof(double), typeof(double));
+		three = compiler.CompileAnonymous("(-{1} + Math.Sqrt({1} * {1} - 4 * {0} * {2})) / (2 * {0})", typeof(double), typeof(double), typeof(double));
 		Assert.That(three(1d, 5d, 6d), Is.EqualTo((-5d + Math.Sqrt(5d * 5d - 4 * 1d * 6d)) / (2 * 1d)));
 		Assert.That(three(1d, 3d, 2d), Is.EqualTo((-3d + Math.Sqrt(3d * 3d - 4 * 1d * 2d)) / (2 * 1d)));
 
-		three = compiler.CompileAnonomus("{0}.Substring({1}, {2})", typeof(string), typeof(int), typeof(int));
+		three = compiler.CompileAnonymous("{0}.Substring({1}, {2})", typeof(string), typeof(int), typeof(int));
 		Assert.That(three("Hello World!", 0, 5), Is.EqualTo("Hello World!".Substring(0, 5)));
 
-		three = compiler.CompileAnonomus("{0}.Replace({1}, {2})", typeof(string), typeof(char), typeof(char));
+		three = compiler.CompileAnonymous("{0}.Replace({1}, {2})", typeof(string), typeof(char), typeof(char));
 		Assert.That(three("Hello World!", 'e', 'a'), Is.EqualTo("Hello World!".Replace('e', 'a')));
 
 
 		Func<object, object, object, object, object> four;
 
-		four = compiler.CompileAnonomus("{0} * {1} + 0.5d * {2} * {1} * {1} + 1d/6d * {3} * {1} * {1} * {1}", typeof(double), typeof(double), typeof(double), typeof(double));
+		four = compiler.CompileAnonymous("{0} * {1} + 0.5d * {2} * {1} * {1} + 1d/6d * {3} * {1} * {1} * {1}", typeof(double), typeof(double), typeof(double), typeof(double));
 		Assert.That(four(1d, 2d, 3d, 4d), Is.EqualTo(1d * 2d + 0.5 * 3d * 2d * 2d + 1d / 6d * 4d * 2d * 2d * 2d));
 		Assert.That(four(5d, 6d, 7d, 8d), Is.EqualTo(5d * 6d + 0.5 * 7d * 6d * 6d + 1d / 6d * 8d * 6d * 6d * 6d));
 
-		four = compiler.CompileAnonomus("{0} >= 4 && {1} >= 4 ? {2} : {3}", typeof(int), typeof(int), typeof(int), typeof(int));
+		four = compiler.CompileAnonymous("{0} >= 4 && {1} >= 4 ? {2} : {3}", typeof(int), typeof(int), typeof(int), typeof(int));
 
 		Assert.That(four(5, 5, 10, 20), Is.EqualTo(5 >= 4 && 5 >= 4 ? 10 : 20));
 		Assert.That(four(3, 5, 10, 20), Is.EqualTo(3 >= 4 && 5 >= 4 ? 10 : 20));

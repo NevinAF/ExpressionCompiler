@@ -1,7 +1,7 @@
-using System;
 using System.Reflection;
 using System.Reflection.Emit;
-using System.Linq.Expressions;
+
+#nullable disable
 
 namespace NAF.ExpressionCompiler
 {
@@ -47,7 +47,7 @@ namespace NAF.ExpressionCompiler
 
 		private static void EmitMethodCall(ILGenerator il, MethodBase method, Type[] funcParameters, Type funcReturnType)
 		{
-			ParameterInfo[] parameters = method.GetParameters();
+			ParameterInfo[] parameters = method.GetParametersCached();
 			int funcIndex = 0;
 
 			if (!method.IsStatic && !method.IsConstructor)
@@ -58,7 +58,7 @@ namespace NAF.ExpressionCompiler
 			}
 
 			if (funcIndex + parameters.Length != funcParameters.Length)
-				throw new ArgumentException("Invalid number of parameters");
+				throw new ArgumentException("Invalid number of parameters: Func Params => " + string.Join(", ", funcParameters.Select(x => x.Name)) + ". Method " + method.Name + " Params => " + string.Join(", ", parameters.Select(x => x.ParameterType.Name)));
 
 			for (int i = 0; i < parameters.Length; i++, funcIndex++)
 			{
@@ -169,5 +169,24 @@ namespace NAF.ExpressionCompiler
 			return (T)dynamicMethod.CreateDelegate(typeof(T));
 		}
 
+
+		public static T BoxDelegate<T>(Delegate del) where T : MulticastDelegate
+		{
+			MethodInfo funcSignature = typeof(T).GetMethod("Invoke");
+
+			ParameterInfo[] funcParamInfos = funcSignature.GetParametersCached();
+			Type[] funcParams = new Type[funcParamInfos.Length];
+			for (int i = 0; i < funcParamInfos.Length; i++)
+				funcParams[i] = funcParamInfos[i].ParameterType;
+			Type funcReturnType = funcSignature.ReturnType;
+
+			DynamicMethod dynamicMethod = new DynamicMethod("Delegate", funcReturnType, funcParams, typeof(EmitUtils), true);
+			ILGenerator il = dynamicMethod.GetILGenerator();
+
+			EmitMethodCall(il, del.GetMethodInfo(), funcParams, funcReturnType);
+			il.Emit(OpCodes.Ret);
+
+			return (T)dynamicMethod.CreateDelegate(typeof(T));
+		}
 	}
 }

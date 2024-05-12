@@ -15,7 +15,7 @@ namespace NAF.ExpressionCompiler
 				case ExpressionType.Index:
 					IndexExpression index = (IndexExpression)expr;
 					if (index.Indexer != null && !index.Indexer.CanRead) {
-						throw new SymanticException(expression, term, "Indexer '" + index.Indexer.Name + "' does not have a get accessor and cannot be used in the given context");
+						throw new SemanticException(expression, term, "Indexer '" + index.Indexer.Name + "' does not have a get accessor and cannot be used in the given context");
 					}
 					break;
 				case ExpressionType.MemberAccess:
@@ -24,7 +24,7 @@ namespace NAF.ExpressionCompiler
 					if (memberInfo.MemberType == MemberTypes.Property) {
 						PropertyInfo prop = (PropertyInfo)memberInfo;
 						if (!prop.CanRead) {
-							throw new SymanticException(expression, term, "Property '" + prop.Name + "' does not have a get accessor and cannot be used in the given context");
+							throw new SemanticException(expression, term, "Property '" + prop.Name + "' does not have a get accessor and cannot be used in the given context");
 						}
 					}
 					break;
@@ -39,7 +39,7 @@ namespace NAF.ExpressionCompiler
 				case ExpressionType.Index:
 					IndexExpression index = (IndexExpression)expr;
 					if (index.Indexer != null && !index.Indexer.CanWrite)
-						throw new SymanticException(expression, term, "Indexer '" + index.Indexer.Name + "' does not have a set accessor and cannot be used in an assignment");
+						throw new SemanticException(expression, term, "Indexer '" + index.Indexer.Name + "' does not have a set accessor and cannot be used in an assignment");
 					break;
 				case ExpressionType.MemberAccess:
 					MemberExpression member = (MemberExpression)expr;
@@ -47,12 +47,12 @@ namespace NAF.ExpressionCompiler
 						case MemberTypes.Property:
 							PropertyInfo prop = (PropertyInfo)member.Member;
 							if (!prop.CanWrite)
-								throw new SymanticException(expression, term, "Property '" + prop.Name + "' does not have a set accessor and cannot be used in an assignment");
+								throw new SemanticException(expression, term, "Property '" + prop.Name + "' does not have a set accessor and cannot be used in an assignment");
 							break;
 						case MemberTypes.Field:
 							FieldInfo field = (FieldInfo)member.Member;
 							if (field.IsInitOnly || field.IsLiteral)
-								throw new SymanticException(expression, term, "Field '" + field.Name + "' is readonly and cannot be used in an assignment");
+								throw new SemanticException(expression, term, "Field '" + field.Name + "' is readonly and cannot be used in an assignment");
 							break;
 					}
 					break;
@@ -60,7 +60,7 @@ namespace NAF.ExpressionCompiler
 					break;
 
 				default:
-					throw new SymanticException(expression, term, "The write parameter of an assignment must be a variable, property or indexer");
+					throw new SemanticException(expression, term, "The write parameter of an assignment must be a variable, property or indexer");
 			}
 		}
 	}

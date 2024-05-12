@@ -5,6 +5,8 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 
+#nullable disable
+
 namespace NAF.ExpressionCompiler
 {
 	public class TerminalMemberColorizer : MemberColorizer

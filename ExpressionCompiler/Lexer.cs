@@ -46,7 +46,7 @@ namespace NAF.ExpressionCompiler
 		{
 			Token token = NextToken();
 			if (token.type != expected)
-				throw new SymanticException(_source, expected, token, message);
+				throw new SemanticException(_source, expected, token, message);
 			return token;
 		}
 

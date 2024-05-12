@@ -10,7 +10,7 @@ namespace NAF.ExpressionCompiler
 
 
 	/// <summary>
-	/// Parses C# code without any allocations, using a compiler context for buffers.
+	/// Parses C# code without any allocations, using a <see cref="Compiler"/> context for buffers.
 	/// </summary>
 	public ref partial struct Parser
 	{
@@ -19,16 +19,25 @@ namespace NAF.ExpressionCompiler
 		/// <summary> Parses the expression into a single expression. </summary>
 		/// <param name="compiler"> The compiler context for buffers and utility. </param>
 		/// <param name="expression"> The expression to parse. </param>
-		/// <param name="parameters"> The parameters to use when parsing. </param>
+		/// <param name="parameters"> The parameters to use when parsing. If null, an empty array is used. </param>
+		/// <param name="returnType"> The return type of the expression. If null, the return type is not checked. </param>
 		/// <returns> The parsed expression. </returns>
-		public static Expression SingleExpression(Compiler compiler, ReadOnlySpan<char> expression, params Expression[] parameters)
+		public static Expression SingleExpression(Compiler compiler, ReadOnlySpan<char> expression, Expression[]? parameters = null, Type? returnType = null)
 		{
-			Parser parser = new Parser(compiler, expression, parameters);
+			Parser parser = parameters == null ? new Parser(compiler, expression) : new Parser(compiler, expression, parameters);
 			Term term = parser.ParseExpression();
 			parser.ExpectEnd();
 
-			return parser.ExpectExpression(term);
+			if (returnType == null || returnType == typeof(void))
+				return parser.ExpectExpression(term);
+			return parser.Convert(term, returnType);
 		}
+
+		/// <summary> Parses the expression into a single expression. </summary>
+		/// <param name="compiler"> The compiler context for buffers and utility. </param>
+		/// <param name="expression"> The expression to parse. </param>
+		/// <param name="parameters"> The parameters to use when parsing. </param>
+		/// <returns> The parsed expression. </returns>
 
 		#endregion Public (Static) API
 
@@ -67,7 +76,7 @@ namespace NAF.ExpressionCompiler
 		internal readonly Expression ExpectExpression(in Term term)
 		{
 			if (term.expression == null)
-				throw new SymanticException(expression, term.start, term.length, "Expected an expression but got a static type reference.");
+				throw new SemanticException(expression, term.start, term.length, "Expected an expression but got a static type reference.");
 			return term.expression;
 		}
 
@@ -75,14 +84,14 @@ namespace NAF.ExpressionCompiler
 		{
 			Expression e = ExpectExpression(term);
 			if (e.Type == typeof(void))
-				throw new SymanticException(expression, term.start, term.length, "Void expressions cannot be used as terms.");
+				throw new SemanticException(expression, term.start, term.length, "Void expressions cannot be used as terms.");
 			return e;
 		}
 
 		internal readonly Type ExpectType(in Term term)
 		{
 			if (term.staticTypeReference == null)
-				throw new SymanticException(expression, term.start, term.length, "Expected a static type reference but got an expression.");
+				throw new SemanticException(expression, term.start, term.length, "Expected a static type reference but got an expression.");
 			return term.staticTypeReference;
 		}
 
@@ -91,7 +100,7 @@ namespace NAF.ExpressionCompiler
 		{
 			// Get all terms and operators so that they can be ordered by precedence.
 			StackSegment<Term> terms = compiler.CreateTermSegment();
-			StackSegment<Token> operators = compiler.CreateOperatorSegement();
+			StackSegment<Token> operators = compiler.CreateOperatorSegment();
 			int topPrecedence = int.MaxValue;
 
 			terms.Push(ParseTerm());
@@ -107,7 +116,7 @@ namespace NAF.ExpressionCompiler
 				}
 
 				if (!operatorToken.type.IsOperator())
-					throw new SymanticException(expression, operatorToken, $"Expected an operator or puncuation, but got '{operatorToken.type}'");
+					throw new SemanticException(expression, operatorToken, $"Expected an operator or punctuation, but got '{operatorToken.type}'");
 
 				int precedence = operatorToken.type.MultiaryPrecedence();
 				Term term = ParseTerm();
@@ -169,7 +178,7 @@ namespace NAF.ExpressionCompiler
 				left = MakeBinary(operators.Pop(), terms.Pop(), left);
 
 			if (operators.Count == 0)
-				throw new SymanticException(expression, op, "The ternary conditional operator ':' must always be preceded by a '?' operator.");
+				throw new SemanticException(expression, op, "The ternary conditional operator ':' must always be preceded by a '?' operator.");
 
 			Token q = operators.Pop(); // Remove the '?'
 			Term conditionTerm = terms.Pop();
@@ -208,7 +217,7 @@ namespace NAF.ExpressionCompiler
 				TokenType.Typeof => ParseTypeOf(token),
 				TokenType.ParenthesisOpen => ParseParenthesis(token),
 				TokenType.New => ParseNew(token),
-				_ => throw new SymanticException(expression, token, $"Expected the start of a term (like an identifier, literal, group, cast..), but got '{token.type}'"),
+				_ => throw new SemanticException(expression, token, $"Expected the start of a term (like an identifier, literal, group, cast..), but got '{token.type}'"),
 			};
 
 			// Apply prefix unary operators
@@ -293,7 +302,7 @@ namespace NAF.ExpressionCompiler
 			pathParts[0] = token;
 			while (lexer.AcceptIf(TokenType.MemberAccess) && pathLength < pathParts.Length - 1)
 			{
-				pathParts[pathLength] = lexer.Expected(TokenType.Identifier, "An idendifier should always follow a member access operator '.', unless the dot is a part of a number.");
+				pathParts[pathLength] = lexer.Expected(TokenType.Identifier, "An identifier should always follow a member access operator '.', unless the dot is a part of a number.");
 				pathLength++;
 			}
 			pathParts = pathParts[..pathLength];
@@ -379,7 +388,7 @@ namespace NAF.ExpressionCompiler
 		private Term ParseString(in Token token)
 		{
 			ReadOnlySpan<char> span = lexer.GetTokenSpan(token);
-			// Remove escaped characters (anything affer a \)
+			// Remove escaped characters (anything after a \)
 			Span<char> buffer = stackalloc char[span.Length];
 			int i = 0;
 			for (int j = 1; j < span.Length - 1; j++)
@@ -436,10 +445,10 @@ namespace NAF.ExpressionCompiler
 			int length = close.start + close.length - start;
 
 			if (parameters == null)
-				throw new SymanticException(expression, start, length, "A parameter by index term, '{<int>}' can only be used when the expression has parameters.");
+				throw new SemanticException(expression, start, length, "A parameter by index term, '{<int>}' can only be used when the expression has parameters.");
 
 			if (index < 0 || index >= parameters!.Length)
-				throw new SymanticException(expression, start, length, $"The parameter by index term '{{<int>}}' has an out of range index: '{index}' given out of {parameters.Length} parameters.");
+				throw new SemanticException(expression, start, length, $"The parameter by index term '{{<int>}}' has an out of range index: '{index}' given out of {parameters.Length} parameters.");
 
 			return new Term(parameters[index], start, length);
 		}
@@ -471,7 +480,7 @@ namespace NAF.ExpressionCompiler
 				}
 				catch (Exception e) {
 					result.length = term.start + term.length - result.start;
-					throw new SymanticException(expression, result, "Term was interpreted as a cast '(type)Term', but there is no cast between (term) " + ExpectTerm(term).Type + " and (type) " + result.staticTypeReference + ".", e);
+					throw new SemanticException(expression, result, "Term was interpreted as a cast '(type)Term', but there is no cast between (term) " + ExpectTerm(term).Type + " and (type) " + result.staticTypeReference + ".", e);
 				}
 			}
 			else result.length = close.start + close.length - token.start;
@@ -498,7 +507,7 @@ namespace NAF.ExpressionCompiler
 
 		private void ParseMemberAccess(ref Term target)
 		{
-			Token token = lexer.Expected(TokenType.Identifier, "An idendifier should always follow a member access operator '.', unless the dot is a part of a number.");
+			Token token = lexer.Expected(TokenType.Identifier, "An identifier should always follow a member access operator '.', unless the dot is a part of a number.");
 			ParseMemberAccess(ref target, token);
 		}
 
@@ -692,7 +701,7 @@ namespace NAF.ExpressionCompiler
 			// Array access is special:
 			if (target.Type.IsArray && arguments.Count == target.Type.GetArrayRank())
 			{
-				var buffer = compiler.ConverBuffer(arguments.Count);
+				var buffer = compiler.ConvertBuffer(arguments.Count);
 				for (int i = 0; i < arguments.Count; i++)
 				{
 					if (ExpectTerm(arguments[i]).Type != typeof(int))
@@ -701,7 +710,7 @@ namespace NAF.ExpressionCompiler
 					}
 					catch (ArgumentException e)
 					{
-						throw new SymanticException(expression, term, $"Array indexers require integer parameter(s). Parameter {i} with type {ExpectTerm(arguments[i]).Type} could not be converted to an integer.", e);
+						throw new SemanticException(expression, term, $"Array indexers require integer parameter(s). Parameter {i} with type {ExpectTerm(arguments[i]).Type} could not be converted to an integer.", e);
 					}
 					else buffer[i] = ExpectTerm(arguments[i]);
 				}
@@ -735,7 +744,7 @@ namespace NAF.ExpressionCompiler
 					term.expression = Expression.Property(expression, "Value");
 				}
 				catch {
-					throw new OperationException(this.expression, token, term, $"Cannot use a null conditionl a Non-Nullable value type: '{type.Name}'.");
+					throw new OperationException(this.expression, token, term, $"Cannot use a null conditional a Non-Nullable value type: '{type.Name}'.");
 				}
 			}
 			else {

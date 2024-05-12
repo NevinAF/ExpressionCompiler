@@ -105,7 +105,7 @@ namespace NAF.ExpressionCompiler
 				// Identical signature found. Only one would exists and no convertions needed.
 				if (matches == parameters.Length)
 				{
-					convertedArguments = compiler.ConverBuffer(parameters.Length);
+					convertedArguments = compiler.ConvertBuffer(parameters.Length);
 					for (int j = 0; j < arguments.Count; j++)
 						convertedArguments[j] = ExpectTerm(arguments[j]);
 					return i;
@@ -156,7 +156,7 @@ namespace NAF.ExpressionCompiler
 			if (arguments.Count > parameters.Length)
 				return null;
 
-			Expression[] buffer = compiler.ConverBuffer(parameters.Length);
+			Expression[] buffer = compiler.ConvertBuffer(parameters.Length);
 
 			if (arguments.Count == 0 && parameters.Length == 0)
 				return buffer;

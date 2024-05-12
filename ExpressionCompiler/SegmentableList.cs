@@ -53,7 +53,7 @@ namespace NAF.ExpressionCompiler
 	}
 
 	/// <summary>
-	/// Represents a segment of a <see cref="SegmentableStack{T}"/>. This is similar to <see cref="System.Span{T}"/>, but with a push/pop interface. Only one segment can be modified at a time. All segmens created after a given segment must be disposed (or empty) before the given segment can be modified again. Very useful for recursive algorithms that require a stack buffer for evaluations.
+	/// Represents a segment of a <see cref="SegmentableStack{T}"/>. This is similar to <see cref="System.Span{T}"/>, but with a push/pop interface. Only one segment can be modified at a time. All segments created after a given segment must be disposed (or empty) before the given segment can be modified again. Very useful for recursive algorithms that require a stack buffer for evaluations.
 	/// </summary>
 	/// <typeparam name="T"></typeparam>
 	public struct StackSegment<T> : System.IDisposable

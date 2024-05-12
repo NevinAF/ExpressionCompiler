@@ -101,8 +101,8 @@ public class ExampleClass
 			var (expression, type, param) = expressions[i];
 
 			if (type == null)
-				parser.CompileAnonomus(expression)();
-			else parser.CompileAnonomus(expression, type)(param != null ? param : (type.IsValueType ? Activator.CreateInstance(type) : null)!);
+				parser.CompileAnonymous(expression)();
+			else parser.CompileAnonymous(expression, type)(param != null ? param : (type.IsValueType ? Activator.CreateInstance(type) : null)!);
 		}
 	}
 }

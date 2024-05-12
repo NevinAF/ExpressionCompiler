@@ -280,11 +280,11 @@ namespace NAF.ExpressionCompiler
 		}
 
 		/// <summary>
-		/// Returns the precedence of the specified numeric type, useful for determining the casting order of numarical operations.
+		/// Returns the precedence of the specified numeric type, useful for determining the casting order of numerical operations.
 		/// </summary>
 		/// <param name="type"></param>
 		/// <returns></returns>
-		public static int NumaricTypePrecedence(this Type type)
+		public static int NumericTypePrecedence(this Type type)
 		{
 			int typeCode = (int)Type.GetTypeCode(type);
 			if (typeCode > (int)TypeCode.Decimal || typeCode < (int)TypeCode.Char)

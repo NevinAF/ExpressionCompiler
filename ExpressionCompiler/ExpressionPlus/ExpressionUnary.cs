@@ -21,7 +21,7 @@ namespace NAF.ExpressionCompiler
 			if (TypeUtils.IsAssignableUsing(expr.Type, type, out MethodInfo? method))
 				return ExpressionConstructors.UnaryConstructor(ExpressionType.Convert, expr, type, method);
 
-			throw new SymanticException(expression, term, "No coercion operator is defined from type '" + expr.Type.Name + "' to '" + type.Name + "'.");
+			throw new SemanticException(expression, term, "No coercion operator is defined from type '" + expr.Type.Name + "' to '" + type.Name + "'.");
 		}
 
 		internal Expression? TryConvert(in Term term, Type type)
@@ -105,11 +105,15 @@ namespace NAF.ExpressionCompiler
 					break;
 
 				case TokenType.Increment:
+					if (expr.Type.IsValueType)
+						RequiresCanWrite(term);
 					type = op.start > term.start ? ExpressionType.PostIncrementAssign : ExpressionType.PreIncrementAssign;
 					methodName = TypeUtils.IsArithmetic(expr.Type) ? null : "op_Increment";
 					break;
 
 				case TokenType.Decrement:
+					if (expr.Type.IsValueType)
+						RequiresCanWrite(term);
 					type = op.start > term.start ? ExpressionType.PostDecrementAssign : ExpressionType.PreDecrementAssign;
 					methodName = TypeUtils.IsArithmetic(expr.Type) ? null : "op_Decrement";
 					break;
