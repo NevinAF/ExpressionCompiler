@@ -5,6 +5,10 @@ The .NET Expression Compiler is a library that allows you to compile string expr
 
 This library uses `System.Reflection` and `System.Linq.Expressions` to compile expressions into delegates and is highly optimized for performance. There is hardly any intrinsic performance cost with most of the performance coming from compiling the `System.Linq.Expressions` tree. That is, compiling expressions from strings is nearly as fast as manually writing a whole expression tree.
 
+- Supports most C# syntax
+- Extremely detailed compilation errors (including character positions)
+- Built-in caching for compiled expressions
+
 ## Why?
 
 This project was initially created to work around the limitations of C# attributes by allowing you to define lambda expressions as string literals. Attributes can then use the `Compiler` class to quickly compile the expression into a delegate.
@@ -57,8 +61,14 @@ public static void Main()
 	Example example = new Example();
 	incValueFunc(example, 3);
 	Console.WriteLine(example.Value); // 9
+
+	// Compile Cache is a thread-safe cache for compiled expressions (no manual caching needed)
+	var strReplace = CompileCache<Func<string, object, object, string>>.Compile("{0}.Replace({1}.ToString(), {2}.ToString())");
+	Console.WriteLine(strReplace("Hello, World!", 'o', '0')); // Hell0, W0rld!
+	Console.WriteLine(strReplace("Hello, World!", "World", 45f)); // Hello, 45!
 }
 ```
+
 
 ### Anonymous/Boxed Compilation
 
@@ -74,11 +84,13 @@ class Example {
 
 public static void Main()
 {
-	Compiler compiler = new Compiler();
+	// The comment is synonymous with using CompileCache, but requires recompilation every call.
+	// Compiler compiler = new Compiler();
+	// object AddOp(object left, object right) =>
+	// 	compiler.CompileAnonymous("{0} + {1}", left.GetType(), right.GetType())(left, right);
 
-	// The compiler delegate should likely be stored in a field to prevent recompilation
 	object AddOp(object left, object right) =>
-		compiler.CompileAnonymous("{0} + {1}", left.GetType(), right.GetType())(left, right);
+		CompileCache.Compile("{0} + {1}", left.GetType(), right.GetType())(left, right);
 
 	Console.WriteLine(AddOp(3, 8)); // 11
 	Console.WriteLine(AddOp("Hello", " World")); // "Hello World"
@@ -164,22 +176,92 @@ public class BufferSizeAttribute : Attribute
 
 ## Supported Syntax
 
-Most C# syntax *expressions* are supported. This does not include blocks or declarations. There are two main differences between C# and expressions compiled by this library:
+Most C# syntax *expressions* are supported. This does not include blocks or declarations. There are three main differences between C# and expressions compiled by this library:
 
 1. All parameters are notated with `{#}` where `#` is the index of the parameter. Parameters are not named for API simplicity. The first parameter, `{0}`, is always the context object, meaning that all properties and methods on this object can be accessed by name without the `{#}` notation. The `this` keyword is synonymous with `{0}`.
 2. All single quotes `'` are treated as double quotes unless they capture exactly one character (in which case it is treated as a char literal). This prevents the need for escaping quotes in strings.
+3. All explicit type casts are used as implicit casts. For example, `4.5f` can be cast to an integer without the need for `(int)4.5f`. This keeps the syntax of expressions minimal as usually these casts are due to expected return types.
 
 The following is a list of supported syntax. `var` is used to represent any expression, including literals, parameters, other member accesses or a parenthesized expression. `Type` is used to represent any type name.
 
 - Literals: `1`, `1.0`, `"Hello, World!"`, `true`, `null`, `'a'`, `'\n'`, `35ul`, `3.14f`, `3.14d`, `3.14m`
 - All operators including user defined overloads
 	- Unary: `+`, `-`, `!`, `~`, `++` (pre/post), `--` (pre/post)
-	- Binary: `+`, `-`, `*`, `/`, `%`, `&`, `|`, `^`, `<<`, `>>`, `&&`, `||`, `==`, `!=`, `<`, `>`, `<=`, `>=`, `??`, `?:`, `+=`, `-=`, `*=`, `/=`, `%=`, `&=`, `|=`, `^=`, `<<=`, `>>=`
+	- Binary: `+`, `-`, `*`, `/`, `%`, `&`, `|`, `^`, `<<`, `>>`, `&&`, `||`, `==`, `!=`, `<`, `>`, `<=`, `>=`, `?:`, `+=`, `-=`, `*=`, `/=`, `%=`, `&=`, `|=`, `^=`, `<<=`, `>>=`
 	- Ternary: `? :`
 - Member Access: `var.field`, `var.Property`, `var.Method()`, `var[var]`, `var.Method(var, var)`
+- Null Conditional: `var?.field`, `var?.Method()`, `var?[var]`, `var?.Method(var, var)`
 - Index Access: `var[var]`, `var[var,var]`, `var[var,var,var]`
-- Type Casts: `(Type)var`, `var as Type`
+- Type Casts: `(Type)var`
 - Constructor Calls: `new Type(var, var)`
 - Typeof: `typeof(Type)`
 - Parenthesized Expressions: `(var)`
 - Static Member Access: `Type.field`, `Type.Method()`
+
+### Examples
+
+The following are a small subset of the examples from the test cases to quickly show how powerful the expression compiler is.
+
+```csharp
+"1 + 2 * 3"
+"'hello' == 'goodbye' && 'world' == 'world'"
+"43.21f >= 43.22"
+"+Math.PI / Math.E"
+"string.Empty + \"Hello\" + \"World\" + \"!\""
+"DateTime.Now - DateTime.UtcNow > TimeSpan.Zero"
+"~(byte.MaxValue - 2035)"
+"Substring(0, 5)"
+"Replace('e', 'a')"
+"Replace(\"Hello\"", "\"World\")"
+"this + 4"
+"this * Math.PI"
+"'The special number is ' + this"
+"int.Parse(this.Replace('x', '4'))"
+"this.Value.AddDays(1)"
+"this.HasValue ? this.Value : DateTime.MinValue"
+"0x45 >> 2"
+"0x45 | 0x23"
+"this - 63"
+"this - 63"
+"this ?? 5"
+"this ?? 5"
+"this?.Substring(0, 5)"
+"IntField"
+"FloatProperty"
+"AddMethod(5)"
+"this[5]"
+"this[5, 6]"
+"Strings[1]"
+"ExampleClass.StaticStringField"
+"ExampleClass.StaticStringProperty"
+"ExampleClass.StaticIntField"
+"ExampleClass.StaticDoubleConstant"
+"ExampleClass.StaticDivideMethod(5, 2)"
+"this[2] + this[3] * this[4]"
+"this.IntField + this.FloatProperty * 2"
+"this.AddMethod(5) * 2 - this.IntField"
+"Math.Pow(this.IntField, 2) + Math.Sqrt(this.FloatProperty)"
+"ExampleClass.StaticDivideMethod(5, 2) * ExampleClass.StaticIntField - ExampleClass.StaticDoubleConstant"
+"this[5, 6] + this.Strings[1].Length"
+"this.HasValue ? this.Value.AddDays(1) : DateTime.MinValue"
+"int.Parse(this.Replace('x', '4')) + this.Length"
+"this.Value.AddDays(1) - this.Value"
+"this ?? 5 + 2 * 3"
+"this?.Substring(0, 5) + \" \" + this?.Substring(5, 5)"
+"StaticStringField + \" \" + StaticStringProperty"
+"StaticIntField * StaticDoubleConstant / 2"
+"ExampleClass.StaticDivideMethod(5, 2) +ExampleClass.StaticIntField * 2"
+"DateTime.Now.DayOfWeek + \" \" + DateTime.Now.Day"
+"TimeSpan.FromHours(1).TotalMinutes"
+"Guid.NewGuid().ToString().Length"
+"Math.Max(this.IntField, 10)"
+"Math.Min(this.FloatProperty, 3.5f)"
+"this.ToString().Length"
+"this.ToString().Substring(0, 2)"
+"this.Split(',').Length"
+"this.ToUpper().Replace('A', 'B')"
+"this.ToLower().Contains('apple')"
+"this.HasValue ? this.Value : new DateTime(2000, 1, 1)"
+"this ?? new TimeSpan(1, 0, 0)"
+"this?.Length ?? 0"
+```
